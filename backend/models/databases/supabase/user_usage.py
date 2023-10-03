@@ -29,6 +29,29 @@ class UserUsage(Repository):
         """
         Fetch the user settings from the database
         """
+        # select  *from  auth.users uwhere  u.email in (    select      c.email    from      stripe.customers c  )  and u.id = '3f2a6dc3-1122-4bc9-a0dc-5f076a968c31'
+        user_email_customer = (
+            self.db.from_("users")
+            .select("*")
+            .filter("id", "eq", str(user_id))
+            .execute()
+        )
+        premium_user = (
+            self.db.table("customers")
+            .select("email")
+            .filter("email", "eq", user_email_customer.data[0]["email"])
+            .execute()
+        )
+
+        if premium_user.data and len(premium_user.data) > 0:
+            self.db.table("user_settings").update(
+                {
+                    "max_brains": 30,
+                    "max_brain_size": 10000000,
+                    "daily_chat_credit": 100,
+                }
+            ).match({"user_id": str(user_id)}).execute()
+
         response = (
             self.db.from_("user_settings")
             .select("*")
